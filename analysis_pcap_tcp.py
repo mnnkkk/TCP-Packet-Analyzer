@@ -6,6 +6,7 @@ COUNT = 0
 SENDER = "130.245.145.12"
 RECEIVER = "128.208.2.198"
 REQUESTS = {}
+TRANSACTION = {}
 THROUGHPUT = {}
 PACKET = {}
 
@@ -33,8 +34,13 @@ with open(FILE_PATH, 'rb') as f:
                 if REQUESTS.get(iden, False):
                     THROUGHPUT[iden] += len(tcp)
                     PACKET[iden] += 1
+                    if len(TRANSACTION[iden]) == 0:
+                        TRANSACTION[iden]["FIRST"] = (tcp.seq, tcp.ack, tcp.win)
+                    elif len(TRANSACTION[iden]) == 1:
+                        TRANSACTION[iden]["SECOND"] = (tcp.seq, tcp.ack, tcp.win)
                 if not (REQUESTS.get(iden, False)) and src == SENDER:
                     REQUESTS[iden] = COUNT
+                    TRANSACTION[iden] = {}
                     THROUGHPUT[iden] = len(tcp)
                     PACKET[iden] = 1
                     # print(bin(tcp.flags))
@@ -52,6 +58,7 @@ with open(FILE_PATH, 'rb') as f:
 print("REQUESTS")
 for i in REQUESTS:
     print(REQUESTS[i], i, f"{THROUGHPUT[i]:,d} bytes", f"{PACKET[i]} packets")
+    print(TRANSACTION[i])
 print(len(REQUESTS))
 # if __name__ == "__main__":
     # main()
