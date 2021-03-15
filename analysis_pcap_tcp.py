@@ -10,6 +10,13 @@ TRANSACTION = {}
 THROUGHPUT = {}
 PACKET = {}
 
+def get_ip(data):
+    """
+    Returns the IP addresss encode as 4 bytes in as . dot separated string.
+    """
+    data = data.hex()
+    return ".".join([str(int(data[i:i+2], base=16)) for i in range(0, len(data), 2)])
+
 with open(FILE_PATH, 'rb') as f:
     pcap = dpkt.pcap.Reader(f)
     # print(pcap)
@@ -24,11 +31,8 @@ with open(FILE_PATH, 'rb') as f:
             if isinstance(ip.data, dpkt.tcp.TCP):
                 tcp = ip.data
                 # print("tcp", len(tcp))
-                "ssd".split()
-                src = ip.src.hex()
-                src = ".".join([str(int(src[i:i+2], base=16)) for i in range(0, len(src), 2)])
-                dst = ip.dst.hex()
-                dst = ".".join([str(int(dst[i:i+2], base=16)) for i in range(0, len(dst), 2)])
+                src = get_ip(ip.src)
+                dst = get_ip(ip.dst)
                 
                 iden = (tcp.sport, src, tcp.dport, dst)
                 if REQUESTS.get(iden, False):
