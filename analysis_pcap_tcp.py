@@ -21,7 +21,8 @@ def get_ip(data):
     data = data.hex()
     return ".".join([str(int(data[i:i+2], base=16)) for i in range(0, len(data), 2)])
 
-with open(FILE_PATH, 'rb') as f:
+def process_pcap(file):
+    global COUNT
     pcap = dpkt.pcap.Reader(f)
     # print(pcap)
     for timestamp, buf in pcap:
@@ -74,13 +75,16 @@ with open(FILE_PATH, 'rb') as f:
         # break
 # print(dpkt.pcap.FileHdr.__hdr_len__)
 # print(dpkt.pcap.PktHdr.__hdr_len__)
-for i in INITIAL_SEQ_ACK:
-    print(i, INITIAL_SEQ_ACK[i])
 
-print("REQUESTS")
-for i in REQUESTS:
-    print(REQUESTS[i], i, f"{THROUGHPUT[i]:,d} bytes", f"{PACKET[i]} packets")
-    print(TRANSACTION[i])
-print(len(REQUESTS))
-# if __name__ == "__main__":
-    # main()
+if __name__ == "__main__":
+    with open(FILE_PATH, 'rb') as f:
+        process_pcap(f)
+    
+    for i in INITIAL_SEQ_ACK:
+        print(i, INITIAL_SEQ_ACK[i])
+
+    print("REQUESTS")
+    for i in REQUESTS:
+        print(REQUESTS[i], i, f"{THROUGHPUT[i]:,d} bytes", f"{PACKET[i]} packets")
+        print(TRANSACTION[i])
+    print(len(REQUESTS))
