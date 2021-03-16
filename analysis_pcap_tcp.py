@@ -1,4 +1,5 @@
 import dpkt
+from collections import OrderedDict
 
 FILE_PATH = "assignment2.pcap"
 TCP_COUNT = 0
@@ -9,6 +10,9 @@ REQUESTS = {}
 TRANSACTION = {}
 THROUGHPUT = {}
 PACKET = {}
+
+INITIAL_SEQ_ACK = {}
+SEQ_TO_ACK = {}
 
 def get_ip(data):
     """
@@ -35,13 +39,24 @@ with open(FILE_PATH, 'rb') as f:
                 dst = get_ip(ip.dst)
                 
                 iden = (tcp.sport, src, tcp.dport, dst)
+                # SEQ/ACK number
+                combo = sorted([tcp.sport, tcp.dport]) + sorted([src, dst])
+                combo = tuple(combo)
+                if len(INITIAL_SEQ_ACK.get(combo, {})) == 0:
+                    INITIAL_SEQ_ACK[combo] = {'SEQ': tcp.seq}
+                elif len(INITIAL_SEQ_ACK.get(combo, {})) == 1:
+                    INITIAL_SEQ_ACK[combo]['ACK'] = tcp.seq                    
+
+                SEQ_TO_ACK[tcp.seq] = tcp.seq
                 if REQUESTS.get(iden, False):
                     THROUGHPUT[iden] += len(tcp)
                     PACKET[iden] += 1
-                    if len(TRANSACTION[iden]) == 0:
-                        TRANSACTION[iden]["FIRST"] = (tcp.seq, tcp.ack, tcp.win)
+                    if len(TRANSACTION[iden]) == 0 and tcp.seq-INITIAL_SEQ_ACK[combo]['SEQ'] != 1:
+                        # TRANSACTION[iden]["FIRST"] = (tcp.seq, tcp.ack, tcp.win)
+                        TRANSACTION[iden]["FIRST"] = (tcp.seq-INITIAL_SEQ_ACK[combo]['SEQ'], tcp.ack-INITIAL_SEQ_ACK[combo]['ACK'], tcp.win)
                     elif len(TRANSACTION[iden]) == 1:
-                        TRANSACTION[iden]["SECOND"] = (tcp.seq, tcp.ack, tcp.win)
+                        # TRANSACTION[iden]["SECOND"] = (tcp.seq, tcp.ack, tcp.win)
+                        TRANSACTION[iden]["SECOND"] = (tcp.seq-INITIAL_SEQ_ACK[combo]['SEQ'], tcp.ack-INITIAL_SEQ_ACK[combo]['ACK'], tcp.win)
                 if not (REQUESTS.get(iden, False)) and src == SENDER:
                     REQUESTS[iden] = COUNT
                     TRANSACTION[iden] = {}
@@ -59,6 +74,9 @@ with open(FILE_PATH, 'rb') as f:
         # break
 # print(dpkt.pcap.FileHdr.__hdr_len__)
 # print(dpkt.pcap.PktHdr.__hdr_len__)
+for i in INITIAL_SEQ_ACK:
+    print(i, INITIAL_SEQ_ACK[i])
+
 print("REQUESTS")
 for i in REQUESTS:
     print(REQUESTS[i], i, f"{THROUGHPUT[i]:,d} bytes", f"{PACKET[i]} packets")
