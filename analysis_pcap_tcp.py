@@ -1,3 +1,4 @@
+import datetime
 import dpkt
 from collections import OrderedDict
 
@@ -22,6 +23,8 @@ class Packet():
         self.ip = self.ethernet.data
         self.tcp = self.ip.data
     
+    def get_id(self):
+        return (tcp.sport, get_ip(self.ip.src), tcp.dport, get_ip(self.ip.dst))
 
 def get_ip(data):
     """
@@ -29,6 +32,31 @@ def get_ip(data):
     """
     data = data.hex()
     return ".".join([str(int(data[i:i+2], base=16)) for i in range(0, len(data), 2)])
+
+def get_tcp_flows(file):
+    flows = {}
+    counter = 0
+    pcap = dpkt.pcap.Reader(file)
+    for timestamp, buf in pcap:
+        counter += 1
+        e = dpkt.ethernet.Ethernet(buf)
+        # print("ethernet", len(e))
+        if isinstance(e.data, dpkt.ip.IP):
+            # print(e.dst, e.src, e.type)
+            ip = e.data
+            # print("ip", len(ip))
+            if isinstance(ip.data, dpkt.tcp.TCP):
+                tcp = ip.data
+                # print("tcp", len(tcp))
+                src = get_ip(ip.src)
+                dst = get_ip(ip.dst)
+                
+                iden = (tcp.sport, src, tcp.dport, dst)
+
+                idenP = iden if src == SENDER else (tcp.dport, dst, tcp.sport, src)
+                flows[idenP] = flows.get(idenP, []) + [(COUNT, str(datetime.datetime.utcfromtimestamp(timestamp)), Packet(buf))]
+    
+    return flows
 
 def process_pcap(file):
     global COUNT
@@ -57,7 +85,9 @@ def process_pcap(file):
                 elif len(INITIAL_SEQ_ACK.get(combo, {})) == 1:
                     INITIAL_SEQ_ACK[combo]['ACK'] = tcp.seq                    
 
-                PACKETS[iden] = PACKETS.get(iden, []) + [(COUNT, Packet(buf))]
+                idenP = iden if src == SENDER else (tcp.dport, dst, tcp.sport, src)
+                # idenP = iden
+                PACKETS[idenP] = PACKETS.get(idenP, []) + [(COUNT, str(datetime.datetime.utcfromtimestamp(timestamp)), Packet(buf))]
                 SEQ_TO_ACK[tcp.seq] = tcp.seq
                 if REQUESTS.get(iden, False):
                     THROUGHPUT[iden] += len(tcp)
@@ -86,16 +116,19 @@ def process_pcap(file):
 
 if __name__ == "__main__":
     with open(FILE_PATH, 'rb') as f:
-        process_pcap(f)
+        # process_pcap(f)
+        result = get_tcp_flows(f)
+        for i in result:
+            print(i, len(result[i]), bin(result[i][-2][2].tcp.flags), result[i][0][0], result[i][0][1], result[i][-1][0], result[i][-1][1])
     
-    for i in INITIAL_SEQ_ACK:
-        print(i, INITIAL_SEQ_ACK[i])
+    # for i in INITIAL_SEQ_ACK:
+    #     print(i, INITIAL_SEQ_ACK[i])
 
-    print("REQUESTS")
-    for i in REQUESTS:
-        print(REQUESTS[i], i, f"{THROUGHPUT[i]:,d} bytes", f"{PACKET[i]} packets")
-        print(TRANSACTION[i])
-    print(len(REQUESTS))
+    # print("REQUESTS")
+    # for i in REQUESTS:
+    #     print(REQUESTS[i], i, f"{THROUGHPUT[i]:,d} bytes", f"{PACKET[i]} packets")
+    #     print(TRANSACTION[i])
+    # print(len(REQUESTS))
 
-    for i in PACKETS:
-        print(i, len(PACKETS[i]), PACKETS[i][0][1].tcp.sport)
+    # for i in PACKETS:
+    #     print(i, len(PACKETS[i]), bin(PACKETS[i][-2][2].tcp.flags), PACKETS[i][0][0], PACKETS[i][0][1], PACKETS[i][-1][0], PACKETS[i][-1][1])
