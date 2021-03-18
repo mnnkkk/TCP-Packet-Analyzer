@@ -14,6 +14,15 @@ PACKET = {}
 INITIAL_SEQ_ACK = {}
 SEQ_TO_ACK = {}
 
+PACKETS = {}
+
+class Packet():
+    def __init__(self, data):
+        self.ethernet = dpkt.ethernet.Ethernet(data)
+        self.ip = self.ethernet.data
+        self.tcp = self.ip.data
+    
+
 def get_ip(data):
     """
     Returns the IP addresss encode as 4 bytes in as . dot separated string.
@@ -48,6 +57,7 @@ def process_pcap(file):
                 elif len(INITIAL_SEQ_ACK.get(combo, {})) == 1:
                     INITIAL_SEQ_ACK[combo]['ACK'] = tcp.seq                    
 
+                PACKETS[iden] = PACKETS.get(iden, []) + [(COUNT, Packet(buf))]
                 SEQ_TO_ACK[tcp.seq] = tcp.seq
                 if REQUESTS.get(iden, False):
                     THROUGHPUT[iden] += len(tcp)
@@ -73,8 +83,6 @@ def process_pcap(file):
                     # TCP_COUNT += 1
 
         # break
-# print(dpkt.pcap.FileHdr.__hdr_len__)
-# print(dpkt.pcap.PktHdr.__hdr_len__)
 
 if __name__ == "__main__":
     with open(FILE_PATH, 'rb') as f:
@@ -88,3 +96,6 @@ if __name__ == "__main__":
         print(REQUESTS[i], i, f"{THROUGHPUT[i]:,d} bytes", f"{PACKET[i]} packets")
         print(TRANSACTION[i])
     print(len(REQUESTS))
+
+    for i in PACKETS:
+        print(i, len(PACKETS[i]), PACKETS[i][0][1].tcp.sport)
