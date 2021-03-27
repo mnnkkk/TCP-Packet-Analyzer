@@ -119,7 +119,7 @@ def get_ip(data):
 def get_tcp_flows(file):
     flows = {}
     actual_flows = []
-    identification = set()
+    identification = []
     counter = 0
     pcap = dpkt.pcap.Reader(file)
     for timestamp, buf in pcap:
@@ -139,7 +139,8 @@ def get_tcp_flows(file):
                 iden = (tcp.sport, src, tcp.dport, dst)
 # str(datetime.datetime.utcfromtimestamp(timestamp))
                 idenP = iden if src == SENDER else (tcp.dport, dst, tcp.sport, src)
-                identification.add(idenP)
+                if idenP not in identification:
+                    identification.append(idenP)
                 flows[iden] = flows.get(iden, []) + [(counter, timestamp, Packet(buf))]
     for src_iden in identification:
         dest_iden = src_iden[2:] + src_iden[:2]
@@ -216,6 +217,6 @@ if __name__ == "__main__":
             transactions = flow.get_transactions()
             print("b) The first 2 transactions:")
             for t_count, transaction in enumerate(transactions, start=1):
-                print(f"Tranaction {t_count}: \n\tSequence number: {transaction[0]}\n\tAck number: {transaction[1]}\n\tReceive Window Size: {transaction[2]}")
+                print(f"Tranaction {t_count}: \n\tSequence number: {transaction[0]:,d}\n\tAck number: {transaction[1]:,d}\n\tReceive Window Size: {transaction[2]:,d}")
             print(f"c) Throughput: {flow.get_throughput():,f} bytes/second")
             print("="*100)
