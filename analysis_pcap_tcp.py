@@ -24,7 +24,60 @@ class Packet():
         self.tcp = self.ip.data
     
     def get_id(self):
-        return (tcp.sport, get_ip(self.ip.src), tcp.dport, get_ip(self.ip.dst))
+        return (tcp.sport, get_src(), tcp.dport, get_ip(self.ip.dst))
+
+    def get_payload_size(self):
+        return len(self.tcp.data)
+
+    def get_tcp_flags(self):
+        return self.tcp.flags
+
+    def get_seq(self):
+        return self.tcp.seq
+
+    def get_ack(self):
+        return self.tcp.ack
+
+    def get_src(self):
+        return get_ip(self.ip.src)
+
+class Flow():
+    def __init__(self, sender, receiver):
+        self.sender = sender
+        self.receiver = receiver
+
+        # combine packets
+        self.flow = sorted(self.sender + self.receiver, key=lambda x: x[0])
+        # print(self.sender[1][-1].get_tcp_flags(), 0x10, "?")
+        self.__separate_handshake()
+        # find handshake
+
+    def __separate_handshake(self):
+        # get the syn packet from sender
+        sender_syn = None
+        for packet in self.sender:
+            if packet[-1].get_tcp_flags() == 0x2:
+                sender_syn = packet
+                break
+        # get the syn, ack packet from receiver who's ack is 1 more than seq of the sender's syn packet
+        receiver_syn = None
+        for packet in self.receiver:
+            if packet[-1].get_tcp_flags() == 0x12 and packet[-1].get_ack() == sender_syn[-1].get_seq()+1:
+                receiver_syn = packet
+                break
+        # get the ack packet from sender who's ack is 1 more than seq of syn,ack packet
+        sender_ack = None
+        for packet in self.sender:
+            if packet[-1].get_tcp_flags() == 0x10 and packet[-1].get_ack() == receiver_syn[-1].get_seq()+1:
+                sender_ack = packet
+                break
+        # get index in flow
+        index_to_split = self.flow.index(sender_ack)
+        self.handshake = self.flow[:index_to_split+1]
+        # check if the sender_ack is piggyback
+        if sender_ack[-1].get_payload_size() != 0: # sender_ack is piggyback
+            index_to_split -= 1
+        self.flow = self.flow[index_to_split+1:]
 
 def get_ip(data):
     """
@@ -35,6 +88,8 @@ def get_ip(data):
 
 def get_tcp_flows(file):
     flows = {}
+    actual_flows = []
+    identification = set()
     counter = 0
     pcap = dpkt.pcap.Reader(file)
     for timestamp, buf in pcap:
@@ -52,10 +107,15 @@ def get_tcp_flows(file):
                 dst = get_ip(ip.dst)
                 
                 iden = (tcp.sport, src, tcp.dport, dst)
-
+# str(datetime.datetime.utcfromtimestamp(timestamp))
                 idenP = iden if src == SENDER else (tcp.dport, dst, tcp.sport, src)
-                flows[idenP] = flows.get(idenP, []) + [(COUNT, str(datetime.datetime.utcfromtimestamp(timestamp)), Packet(buf))]
+                identification.add(idenP)
+                flows[iden] = flows.get(iden, []) + [(counter, timestamp, Packet(buf))]
+    for src_iden in identification:
+        dest_iden = src_iden[2:] + src_iden[:2]
+        actual_flows.append(Flow(flows[src_iden], flows[dest_iden]))
     
+    # print(type(actual_flows[0].sender))
     return flows
 
 def process_pcap(file):
@@ -118,8 +178,14 @@ if __name__ == "__main__":
     with open(FILE_PATH, 'rb') as f:
         # process_pcap(f)
         result = get_tcp_flows(f)
-        for i in result:
-            print(i, len(result[i]), bin(result[i][-2][2].tcp.flags), result[i][0][0], result[i][0][1], result[i][-1][0], result[i][-1][1])
+        # for i in result:
+        #     # print(result[i][3][-1].tcp.data)
+        #     # print(i, len(result[i]), bin(result[i][-2][2].tcp.flags), result[i][0][0], result[i][0][1], result[i][-1][0], result[i][-1][1])
+        #     print(i)
+        #     options = dpkt.tcp.parse_opts(result[i][0][-1].tcp.opts)
+        #     window_scale = [value for opt,value in options if opt == dpkt.tcp.TCP_OPT_WSCALE][0]
+        #     print(int(window_scale.hex(),base=16))
+        #     print(f"THROUGHPUT {sum([len(packet[-1].tcp) for packet in result[i] if packet[-1].get_src() == SENDER]):,d} bytes")
     
     # for i in INITIAL_SEQ_ACK:
     #     print(i, INITIAL_SEQ_ACK[i])
