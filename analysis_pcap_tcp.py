@@ -24,7 +24,7 @@ class Packet():
         self.tcp = self.ip.data
     
     def get_id(self):
-        return (tcp.sport, get_src(), tcp.dport, get_ip(self.ip.dst))
+        return (self.tcp.sport, get_ip(self.ip.src), self.tcp.dport, get_ip(self.ip.dst))
 
     def get_payload_size(self):
         return len(self.tcp.data)
@@ -78,6 +78,10 @@ class Flow():
             index_to_split -= 1
         self.flow = self.flow[index_to_split+1:]
 
+    def get_id(self):
+        print(self.sender[0][-1])
+        return self.sender[0][-1].get_id()
+
 def get_ip(data):
     """
     Returns the IP addresss encode as 4 bytes in as . dot separated string.
@@ -114,8 +118,7 @@ def get_tcp_flows(file):
         dest_iden = src_iden[2:] + src_iden[:2]
         actual_flows.append(Flow(flows[src_iden], flows[dest_iden]))
     
-    # print(type(actual_flows[0].sender))
-    return flows
+    return actual_flows
 
 def process_pcap(file):
     global COUNT
@@ -177,7 +180,9 @@ if __name__ == "__main__":
     with open(FILE_PATH, 'rb') as f:
         # process_pcap(f)
         result = get_tcp_flows(f)
-        # for i in result:
+        for flow in result:
+            print(flow)
+            print(flow.get_id())
         #     # print(result[i][3][-1].tcp.data)
         #     # print(i, len(result[i]), bin(result[i][-2][2].tcp.flags), result[i][0][0], result[i][0][1], result[i][-1][0], result[i][-1][1])
         #     print(i)
