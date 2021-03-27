@@ -48,9 +48,8 @@ class Flow():
 
         # combine packets
         self.flow = sorted(self.sender + self.receiver, key=lambda x: x[0])
-        # print(self.sender[1][-1].get_tcp_flags(), 0x10, "?")
-        self.__separate_handshake()
         # find handshake
+        self.__separate_handshake()
 
     def __separate_handshake(self):
         # get the syn packet from sender
