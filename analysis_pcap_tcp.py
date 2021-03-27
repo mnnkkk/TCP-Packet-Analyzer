@@ -38,6 +38,9 @@ class Packet():
     def get_ack(self):
         return self.tcp.ack
 
+    def get_window_size(self):
+        return self.tcp.win
+
     def get_src(self):
         return get_ip(self.ip.src)
 
@@ -50,6 +53,11 @@ class Flow():
         self.flow = sorted(self.sender + self.receiver, key=lambda x: x[0])
         # find handshake
         self.__separate_handshake()
+        # get window size scaling factor
+        options = dpkt.tcp.parse_opts(self.handshake[0][-1].tcp.opts)
+        window_scale = [value for opt,value in options if opt == dpkt.tcp.TCP_OPT_WSCALE][0]
+        self.win_scaling = 2**int(window_scale.hex(),base=16)
+        
 
     def __separate_handshake(self):
         # get the syn packet from sender
@@ -81,6 +89,9 @@ class Flow():
     def get_id(self):
         print(self.sender[0][-1])
         return self.sender[0][-1].get_id()
+
+    def get_transactions(self, start=0, end=2):
+        return [(packet[-1].get_seq(), packet[-1].get_ack(), packet[-1].get_window_size()*self.win_scaling) for packet in self.flow if packet[-1].get_src() == SENDER][start:end]
 
 def get_ip(data):
     """
@@ -183,6 +194,7 @@ if __name__ == "__main__":
         for flow in result:
             print(flow)
             print(flow.get_id())
+            print(flow.get_transactions())
         #     # print(result[i][3][-1].tcp.data)
         #     # print(i, len(result[i]), bin(result[i][-2][2].tcp.flags), result[i][0][0], result[i][0][1], result[i][-1][0], result[i][-1][1])
         #     print(i)
