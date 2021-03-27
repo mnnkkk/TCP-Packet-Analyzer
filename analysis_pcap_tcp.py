@@ -26,6 +26,9 @@ class Packet():
     def get_id(self):
         return (self.tcp.sport, get_ip(self.ip.src), self.tcp.dport, get_ip(self.ip.dst))
 
+    def get_tcp_size(self):
+        return len(self.tcp)
+
     def get_payload_size(self):
         return len(self.tcp.data)
 
@@ -92,6 +95,20 @@ class Flow():
 
     def get_transactions(self, start=0, end=2):
         return [(packet[-1].get_seq(), packet[-1].get_ack(), packet[-1].get_window_size()*self.win_scaling) for packet in self.flow if packet[-1].get_src() == SENDER][start:end]
+
+    def get_throughput(self):
+        # find the fin,ack from receiver
+        last_packet = None
+        for packet in self.receiver:
+            if packet[-1].get_tcp_flags() == 0x11:
+                last_packet == packet
+        # get index of last packet in flow
+        index = self.flow.index(packet)
+        flow_in_period = self.flow[:index+1]
+        data_sent = sum([packet[-1].get_tcp_size() for packet in flow_in_period if packet[-1].get_src() == SENDER])
+        period = flow_in_period[-1][1] - flow_in_period[0][1]
+
+        return data_sent/period
 
 def get_ip(data):
     """
@@ -195,22 +212,4 @@ if __name__ == "__main__":
             print(flow)
             print(flow.get_id())
             print(flow.get_transactions())
-        #     # print(result[i][3][-1].tcp.data)
-        #     # print(i, len(result[i]), bin(result[i][-2][2].tcp.flags), result[i][0][0], result[i][0][1], result[i][-1][0], result[i][-1][1])
-        #     print(i)
-        #     options = dpkt.tcp.parse_opts(result[i][0][-1].tcp.opts)
-        #     window_scale = [value for opt,value in options if opt == dpkt.tcp.TCP_OPT_WSCALE][0]
-        #     print(int(window_scale.hex(),base=16))
-        #     print(f"THROUGHPUT {sum([len(packet[-1].tcp) for packet in result[i] if packet[-1].get_src() == SENDER]):,d} bytes")
-    
-    # for i in INITIAL_SEQ_ACK:
-    #     print(i, INITIAL_SEQ_ACK[i])
-
-    # print("REQUESTS")
-    # for i in REQUESTS:
-    #     print(REQUESTS[i], i, f"{THROUGHPUT[i]:,d} bytes", f"{PACKET[i]} packets")
-    #     print(TRANSACTION[i])
-    # print(len(REQUESTS))
-
-    # for i in PACKETS:
-    #     print(i, len(PACKETS[i]), bin(PACKETS[i][-2][2].tcp.flags), PACKETS[i][0][0], PACKETS[i][0][1], PACKETS[i][-1][0], PACKETS[i][-1][1])
+            print(f"{flow.get_throughput():,f}")
