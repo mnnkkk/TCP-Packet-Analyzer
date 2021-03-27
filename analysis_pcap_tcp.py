@@ -90,7 +90,6 @@ class Flow():
         self.flow = self.flow[index_to_split+1:]
 
     def get_id(self):
-        print(self.sender[0][-1])
         return self.sender[0][-1].get_id()
 
     def get_transactions(self, start=0, end=2):
@@ -208,8 +207,15 @@ if __name__ == "__main__":
     with open(FILE_PATH, 'rb') as f:
         # process_pcap(f)
         result = get_tcp_flows(f)
-        for flow in result:
-            print(flow)
-            print(flow.get_id())
-            print(flow.get_transactions())
-            print(f"{flow.get_throughput():,f}")
+        print(f"There are a total of {len(result)} TCP flows\n")
+        for num, flow in enumerate(result, start=1):
+            # print(flow)
+            print(f"Flow {num} Information:")
+            print("PART A")
+            print(f"a) {flow.get_id()}")
+            transactions = flow.get_transactions()
+            print("b) The first 2 transactions:")
+            for t_count, transaction in enumerate(transactions, start=1):
+                print(f"Tranaction {t_count}: \n\tSequence number: {transaction[0]}\n\tAck number: {transaction[1]}\n\tReceive Window Size: {transaction[2]}")
+            print(f"c) Throughput: {flow.get_throughput():,f} bytes/second")
+            print("="*100)
