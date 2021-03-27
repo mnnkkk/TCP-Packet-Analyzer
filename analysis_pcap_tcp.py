@@ -109,6 +109,35 @@ class Flow():
 
         return data_sent/period
 
+    def estimate_congestion_window_size(self, num_of_sizes=3):
+        # estimate 1 RTT
+        # get first ack in from receiver in flow
+        first_ack = None
+        for packet in self.flow:
+            if packet[-1].get_src() == RECEIVER:
+                first_ack = packet
+                break
+        start_time = self.flow[0][1]
+        RTT = round(first_ack[1]-start_time,ndigits=2)
+        # get timestamps 
+        timestamps = [packet[1] for packet in self.flow if packet[-1].get_src() == SENDER]
+        # subtract start time from each timestamp
+        timestamps = [ts-start_time for ts in timestamps]
+        breakpoints = [i*RTT for i in range(1,num_of_sizes+1)]
+        # get estimated window sizes
+        win_sizes = []
+        timestamp_counter = 0
+        for bp in breakpoints:
+            breakpoint_counter = 0
+            while timestamp_counter < len(timestamps):
+                if timestamps[timestamp_counter] > bp:
+                    win_sizes.append(breakpoint_counter)
+                    break
+                breakpoint_counter += 1
+                timestamp_counter += 1
+
+        return win_sizes
+
 def get_ip(data):
     """
     Returns the IP addresss encode as 4 bytes in as . dot separated string.
@@ -219,4 +248,6 @@ if __name__ == "__main__":
             for t_count, transaction in enumerate(transactions, start=1):
                 print(f"Tranaction {t_count}: \n\tSequence number: {transaction[0]:,d}\n\tAck number: {transaction[1]:,d}\n\tReceive Window Size: {transaction[2]:,d}")
             print(f"c) Throughput: {flow.get_throughput():,f} bytes/second")
+            print("PART B")
+            print(f"1) The first 3 congestion window sizes: {flow.estimate_congestion_window_size()}")
             print("="*100)
