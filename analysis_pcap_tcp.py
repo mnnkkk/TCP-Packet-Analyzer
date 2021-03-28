@@ -1,6 +1,6 @@
 import datetime
 import dpkt
-from collections import OrderedDict
+from collections import Counter
 
 FILE_PATH = "assignment2.pcap"
 TCP_COUNT = 0
@@ -137,6 +137,43 @@ class Flow():
                 timestamp_counter += 1
 
         return win_sizes
+    
+    def get_retransmission(self):
+        # find triple dup acks receive (using ack num)
+        receive = Counter([packet[-1].get_ack() for packet in self.flow if packet[-1].get_src() == RECEIVER])
+        triple_dups_acks = [ack for ack,count in receive.items() if count > 3]
+        # find duplicate acks sent (using seq num)
+        sent = Counter([packet[-1].get_seq() for packet in self.flow if packet[-1].get_src() == SENDER])
+        duplicate_seqs = [seq for seq, count in sent.items() if count > 1]
+
+        # Ignore dups that are not resent
+        intersection = set(duplicate_seqs).intersection(triple_dups_acks)
+        out_of_order = 0
+        for num in intersection:
+            # find the second count in receiver
+            first_dup_ack_count = None
+            count = 0
+            for packet in self.receiver:
+                if packet[-1].get_ack() == num:
+                    count += 1
+                if count == 2:
+                    first_dup_ack_count = packet[0]
+                    break
+            
+            # check that the retransmission is out of order
+            count = 0
+            for packet in self.sender:
+                if packet[-1].get_seq() == num:
+                    count += 1
+                if count == 2:
+                    if first_dup_ack_count > packet[0]:
+                        out_of_order += 1
+                    break
+
+        triple_dups_count = len(intersection)-out_of_order
+        timeout_transmissions = len(duplicate_seqs)-triple_dups_count
+
+        return triple_dups_count, timeout_transmissions
 
 def get_ip(data):
     """
@@ -250,4 +287,6 @@ if __name__ == "__main__":
             print(f"c) Throughput: {flow.get_throughput():,f} bytes/second")
             print("PART B")
             print(f"1) The first 3 congestion window sizes: {flow.estimate_congestion_window_size()}")
+            dup_ack_retransmission, timeout_retransmission = flow.get_retransmission()
+            print(f"2) \tRetransmission due to triple duplicate ack: {dup_ack_retransmission}\n\tRetransmission due to timeout: {timeout_retransmission}")
             print("="*100)
