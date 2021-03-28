@@ -3,19 +3,8 @@ import dpkt
 from collections import Counter
 
 FILE_PATH = "assignment2.pcap"
-TCP_COUNT = 0
-COUNT = 0
 SENDER = "130.245.145.12"
 RECEIVER = "128.208.2.198"
-REQUESTS = {}
-TRANSACTION = {}
-THROUGHPUT = {}
-PACKET = {}
-
-INITIAL_SEQ_ACK = {}
-SEQ_TO_ACK = {}
-
-PACKETS = {}
 
 class Packet():
     def __init__(self, data):
@@ -191,19 +180,14 @@ def get_tcp_flows(file):
     for timestamp, buf in pcap:
         counter += 1
         e = dpkt.ethernet.Ethernet(buf)
-        # print("ethernet", len(e))
         if isinstance(e.data, dpkt.ip.IP):
-            # print(e.dst, e.src, e.type)
             ip = e.data
-            # print("ip", len(ip))
             if isinstance(ip.data, dpkt.tcp.TCP):
                 tcp = ip.data
-                # print("tcp", len(tcp))
                 src = get_ip(ip.src)
                 dst = get_ip(ip.dst)
                 
                 iden = (tcp.sport, src, tcp.dport, dst)
-# str(datetime.datetime.utcfromtimestamp(timestamp))
                 idenP = iden if src == SENDER else (tcp.dport, dst, tcp.sport, src)
                 if idenP not in identification:
                     identification.append(idenP)
@@ -213,62 +197,6 @@ def get_tcp_flows(file):
         actual_flows.append(Flow(flows[src_iden], flows[dest_iden]))
     
     return actual_flows
-
-def process_pcap(file):
-    global COUNT
-    pcap = dpkt.pcap.Reader(f)
-    # print(pcap)
-    for timestamp, buf in pcap:
-        COUNT += 1
-        e = dpkt.ethernet.Ethernet(buf)
-        # print("ethernet", len(e))
-        if isinstance(e.data, dpkt.ip.IP):
-            # print(e.dst, e.src, e.type)
-            ip = e.data
-            # print("ip", len(ip))
-            if isinstance(ip.data, dpkt.tcp.TCP):
-                tcp = ip.data
-                # print("tcp", len(tcp))
-                src = get_ip(ip.src)
-                dst = get_ip(ip.dst)
-                
-                iden = (tcp.sport, src, tcp.dport, dst)
-                # SEQ/ACK number
-                combo = sorted([tcp.sport, tcp.dport]) + sorted([src, dst])
-                combo = tuple(combo)
-                if len(INITIAL_SEQ_ACK.get(combo, {})) == 0:
-                    INITIAL_SEQ_ACK[combo] = {'SEQ': tcp.seq}
-                elif len(INITIAL_SEQ_ACK.get(combo, {})) == 1:
-                    INITIAL_SEQ_ACK[combo]['ACK'] = tcp.seq                    
-
-                idenP = iden if src == SENDER else (tcp.dport, dst, tcp.sport, src)
-                # idenP = iden
-                PACKETS[idenP] = PACKETS.get(idenP, []) + [(COUNT, str(datetime.datetime.utcfromtimestamp(timestamp)), Packet(buf))]
-                SEQ_TO_ACK[tcp.seq] = tcp.seq
-                if REQUESTS.get(iden, False):
-                    THROUGHPUT[iden] += len(tcp)
-                    PACKET[iden] += 1
-                    if len(TRANSACTION[iden]) == 0 and tcp.seq-INITIAL_SEQ_ACK[combo]['SEQ'] != 1:
-                        # TRANSACTION[iden]["FIRST"] = (tcp.seq, tcp.ack, tcp.win)
-                        TRANSACTION[iden]["FIRST"] = (tcp.seq-INITIAL_SEQ_ACK[combo]['SEQ'], tcp.ack-INITIAL_SEQ_ACK[combo]['ACK'], tcp.win)
-                    elif len(TRANSACTION[iden]) == 1:
-                        # TRANSACTION[iden]["SECOND"] = (tcp.seq, tcp.ack, tcp.win)
-                        TRANSACTION[iden]["SECOND"] = (tcp.seq-INITIAL_SEQ_ACK[combo]['SEQ'], tcp.ack-INITIAL_SEQ_ACK[combo]['ACK'], tcp.win)
-                if not (REQUESTS.get(iden, False)) and src == SENDER:
-                    REQUESTS[iden] = COUNT
-                    TRANSACTION[iden] = {}
-                    THROUGHPUT[iden] = len(tcp)
-                    PACKET[iden] = 1
-                    # print(bin(tcp.flags))
-                # if tcp.flags & 0x1 and src == SENDER:
-                    # print(COUNT, iden)
-                    # print(bin(tcp.flags))
-                    # TCP_COUNT += 1
-
-                # if src == SENDER:
-                    # TCP_COUNT += 1
-
-        # break
 
 if __name__ == "__main__":
     with open(FILE_PATH, 'rb') as f:
