@@ -96,7 +96,7 @@ class Flow():
         data_sent = sum([packet[-1].get_tcp_size() for packet in flow_in_period if packet[-1].get_src() == SENDER])
         period = flow_in_period[-1][1] - flow_in_period[0][1]
 
-        return data_sent/period
+        return data_sent, period
 
     def estimate_congestion_window_size(self, num_of_sizes=3):
         # estimate 1 RTT
@@ -212,7 +212,8 @@ if __name__ == "__main__":
             print("b) The first 2 transactions:")
             for t_count, transaction in enumerate(transactions, start=1):
                 print(f"Tranaction {t_count}: \n\tSequence number: {transaction[0]:,d}\n\tAck number: {transaction[1]:,d}\n\tReceive Window Size: {transaction[2]:,d}")
-            print(f"c) Throughput: {flow.get_throughput():,f} bytes/second")
+            data_sent, period = flow.get_throughput()
+            print(f"c) Throughput: {data_sent/period:,f} bytes/second ({data_sent:,d} bytes sent in {period:.4f} seconds)")
             print("PART B")
             print(f"1) The first 3 congestion window sizes: {flow.estimate_congestion_window_size()}")
             dup_ack_retransmission, timeout_retransmission = flow.get_retransmission()

@@ -18,7 +18,7 @@ Tranaction 2:
         Sequence number: 705,669,127
         Ack number: 1,921,750,144
         Receive Window Size: 49,152
-c) Throughput: 5,327,141.878039 bytes/second
+c) Throughput: 5,327,141.878039 bytes/second (10,320,080 bytes sent in 1.9373 seconds)
 PART B
 1) The first 3 congestion window sizes: [10, 20, 33]
 2)      Retransmission due to triple duplicate ack: 2
@@ -36,7 +36,7 @@ Tranaction 2:
         Sequence number: 3,636,173,876
         Ack number: 2,335,809,728
         Receive Window Size: 49,152
-c) Throughput: 1,267,619.603100 bytes/second
+c) Throughput: 1,267,619.603100 bytes/second (10,454,760 bytes sent in 8.2476 seconds)
 PART B
 1) The first 3 congestion window sizes: [10, 20, 33]
 2)      Retransmission due to triple duplicate ack: 4
@@ -54,7 +54,7 @@ Tranaction 2:
         Sequence number: 2,558,634,654
         Ack number: 3,429,921,723
         Receive Window Size: 49,152
-c) Throughput: 1,607,862.811638 bytes/second
+c) Throughput: 1,607,862.811638 bytes/second (1,071,832 bytes sent in 0.6666 seconds)
 PART B
 1) The first 3 congestion window sizes: [10, 20, 33]
 2)      Retransmission due to triple duplicate ack: 0
