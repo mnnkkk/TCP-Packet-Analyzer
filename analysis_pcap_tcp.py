@@ -2,9 +2,9 @@ import datetime
 import dpkt
 from collections import Counter
 
-FILE_PATH = "assignment2.pcap"
-SENDER = "130.245.145.12"
-RECEIVER = "128.208.2.198"
+FILE_PATH = "p02.pcap"
+SENDER = "10.172.207.25"
+RECEIVER = "13.107.6.175"
 
 class Packet():
     def __init__(self, data):
@@ -46,9 +46,12 @@ class Flow():
         # find handshake
         self.__separate_handshake()
         # get window size scaling factor
-        options = dpkt.tcp.parse_opts(self.handshake[0][-1].tcp.opts)
-        window_scale = [value for opt,value in options if opt == dpkt.tcp.TCP_OPT_WSCALE][0]
-        self.win_scaling = 2**int(window_scale.hex(),base=16)
+        try:
+            options = dpkt.tcp.parse_opts(self.handshake[0][-1].tcp.opts)
+            window_scale = [value for opt,value in options if opt == dpkt.tcp.TCP_OPT_WSCALE][0]
+            self.win_scaling = 2**int(window_scale.hex(),base=16)
+        except:
+            a = 0
         
 
     def __separate_handshake(self):
@@ -67,16 +70,23 @@ class Flow():
         # get the ack packet from sender who's ack is 1 more than seq of syn,ack packet
         sender_ack = None
         for packet in self.sender:
-            if packet[-1].get_tcp_flags() == 0x10 and packet[-1].get_ack() == receiver_syn[-1].get_seq()+1:
-                sender_ack = packet
-                break
+            if packet[-1].get_tcp_flags() == 0x10:
+                try:
+                    if packet[-1].get_ack() == receiver_syn[-1].get_seq()+1:
+                        sender_ack = packet
+                        break
+                except:
+                    break
         # get index in flow
-        index_to_split = self.flow.index(sender_ack)
-        self.handshake = self.flow[:index_to_split+1]
-        # check if the sender_ack is piggyback
-        if sender_ack[-1].get_payload_size() != 0: # sender_ack is piggyback
-            index_to_split -= 1
-        self.flow = self.flow[index_to_split+1:]
+        try:
+            index_to_split = self.flow.index(sender_ack)
+            self.handshake = self.flow[:index_to_split+1]
+            # check if the sender_ack is piggyback
+            if sender_ack[-1].get_payload_size() != 0: # sender_ack is piggyback
+                index_to_split -= 1
+            self.flow = self.flow[index_to_split+1:]
+        except:
+            return
 
     def get_id(self):
         return self.sender[0][-1].get_id()
@@ -192,11 +202,14 @@ def get_tcp_flows(file):
                 if idenP not in identification:
                     identification.append(idenP)
                 flows[iden] = flows.get(iden, []) + [(counter, timestamp, Packet(buf))]
-    for src_iden in identification:
-        dest_iden = src_iden[2:] + src_iden[:2]
-        actual_flows.append(Flow(flows[src_iden], flows[dest_iden]))
-    
-    return actual_flows
+    try:
+        for src_iden in identification:
+            dest_iden = src_iden[2:] + src_iden[:2]
+            actual_flows.append(Flow(flows[src_iden], flows[dest_iden]))
+
+        return actual_flows
+    except:
+        return actual_flows
 
 if __name__ == "__main__":
     with open(FILE_PATH, 'rb') as f:
@@ -208,10 +221,13 @@ if __name__ == "__main__":
             print(f"Flow {num} Information:")
             print("PART A")
             print(f"a) {flow.get_id()}")
-            transactions = flow.get_transactions()
-            print("b) The first 2 transactions:")
-            for t_count, transaction in enumerate(transactions, start=1):
-                print(f"Tranaction {t_count}: \n\tSequence number: {transaction[0]:,d}\n\tAck number: {transaction[1]:,d}\n\tReceive Window Size: {transaction[2]:,d}")
+            try:
+                transactions = flow.get_transactions()
+                print("b) The first 2 transactions:")
+                for t_count, transaction in enumerate(transactions, start=1):
+                    print(f"Tranaction {t_count}: \n\tSequence number: {transaction[0]:,d}\n\tAck number: {transaction[1]:,d}\n\tReceive Window Size: {transaction[2]:,d}")
+            except:
+                a = 0
             data_sent, period = flow.get_throughput()
             print(f"c) Throughput: {data_sent/period:,f} bytes/second ({data_sent:,d} bytes sent in {period:.4f} seconds)")
             print("PART B")
