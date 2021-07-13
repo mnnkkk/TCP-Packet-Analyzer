@@ -2,9 +2,9 @@ import datetime
 import dpkt
 from collections import Counter
 
-FILE_PATH = "p02.pcap"
-SENDER = "10.172.207.25"
-RECEIVER = "13.107.6.175"
+FILE_PATH = "p01.pcap"
+SENDER = "10.179.59.38"
+RECEIVER = "10.68.33.170"
 
 class Packet():
     def __init__(self, data):
@@ -184,7 +184,7 @@ def get_ip(data):
 def get_tcp_flows(file):
     flows = {}
     actual_flows = []
-    identification = []
+    identifications = []
     counter = 0
     pcap = dpkt.pcap.Reader(file)
     for timestamp, buf in pcap:
@@ -196,20 +196,28 @@ def get_tcp_flows(file):
                 tcp = ip.data
                 src = get_ip(ip.src)
                 dst = get_ip(ip.dst)
-                
-                iden = (tcp.sport, src, tcp.dport, dst)
-                idenP = iden if src == SENDER else (tcp.dport, dst, tcp.sport, src)
-                if idenP not in identification:
-                    identification.append(idenP)
-                flows[iden] = flows.get(iden, []) + [(counter, timestamp, Packet(buf))]
-    try:
-        for src_iden in identification:
-            dest_iden = src_iden[2:] + src_iden[:2]
-            actual_flows.append(Flow(flows[src_iden], flows[dest_iden]))
+                if not (str(src) == SENDER and str(dst) ==RECEIVER) and not (str(dst) == SENDER and str(src) ==RECEIVER):
+                    continue
 
-        return actual_flows
-    except:
-        return actual_flows
+                iden = (tcp.sport, src, tcp.dport, dst)
+                print(counter)
+                # print(iden)
+
+                # One two-way TCP flow uses one idenP (send->recv)
+                idenP = iden if src == SENDER else (tcp.dport, dst, tcp.sport, src)
+                if idenP not in identifications:
+                    identifications.append(idenP)
+
+                if iden not in flows:
+                    flows[iden] = []
+                flows[iden].append((counter, timestamp, Packet(buf)))
+                # print("flows[iden]: " + str(flows[iden]))
+
+    for src_iden in identifications:
+        dest_iden = src_iden[2:] + src_iden[:2]
+        actual_flows.append(Flow(flows[src_iden], flows[dest_iden]))
+
+    return actual_flows
 
 if __name__ == "__main__":
     with open(FILE_PATH, 'rb') as f:
