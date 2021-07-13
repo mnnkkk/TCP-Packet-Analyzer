@@ -213,6 +213,10 @@ def get_tcp_flows(file):
                 flows[iden].append((counter, timestamp, Packet(buf)))
                 # print("flows[iden]: " + str(flows[iden]))
 
+        # Early termination
+        if counter >= 10000:
+            break
+
     for src_iden in identifications:
         dest_iden = src_iden[2:] + src_iden[:2]
         actual_flows.append(Flow(flows[src_iden], flows[dest_iden]))
