@@ -59,15 +59,23 @@ class Flow():
         # get the syn packet from sender
         sender_syn = None
         for packet in self.sender:
-            if packet[-1].get_tcp_flags() == 0x2:
+            if packet[-1].get_tcp_flags() & 0x2:
                 sender_syn = packet
                 break
+        if sender_syn == None:
+            print("No sender_syn")
+        print("sender_syn's seq: " + str(sender_syn[-1].get_seq()))
+
         # get the syn, ack packet from receiver who's ack is 1 more than seq of the sender's syn packet
         receiver_syn = None
         for packet in self.receiver:
-            if packet[-1].get_tcp_flags() == 0x12 and packet[-1].get_ack() == sender_syn[-1].get_seq() + 1:
+            if packet[-1].get_tcp_flags() & 0x12 and packet[-1].get_ack() == sender_syn[-1].get_seq() + 1:
                 receiver_syn = packet
                 break
+        if receiver_syn == None:
+            print("No receiver_syn")
+        print("receiver_syn's seq: " + str(receiver_syn[-1].get_seq()))
+
         # get the ack packet from sender who's ack is 1 more than seq of syn,ack packet
         sender_ack = None
         for packet in self.sender:
@@ -78,16 +86,17 @@ class Flow():
                         break
                 except:
                     break
+        if sender_ack == None:
+            print("No sender_ack")
+        print("send_ack's seq: " + str(sender_ack[-1].get_seq()))
+
         # get index in flow
-        try:
-            index_to_split = self.flow.index(sender_ack)
-            self.handshake = self.flow[:index_to_split + 1]
-            # check if the sender_ack is piggyback
-            if sender_ack[-1].get_payload_size() != 0:  # sender_ack is piggyback
-                index_to_split -= 1
-            self.flow = self.flow[index_to_split + 1:]
-        except:
-            return
+        index_to_split = self.flow.index(sender_ack)
+        self.handshake = self.flow[:index_to_split + 1]
+        # check if the sender_ack is piggyback
+        if sender_ack[-1].get_payload_size() != 0:  # sender_ack is piggyback
+            index_to_split -= 1
+        self.flow = self.flow[index_to_split + 1:]
 
     def get_id(self):
         return self.sender[0][-1].get_id()
