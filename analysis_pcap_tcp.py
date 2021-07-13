@@ -48,12 +48,10 @@ class Flow():
         # find handshake
         self.__separate_handshake()
         # get window size scaling factor
-        try:
-            options = dpkt.tcp.parse_opts(self.handshake[0][-1].tcp.opts)
-            window_scale = [value for opt, value in options if opt == dpkt.tcp.TCP_OPT_WSCALE][0]
-            self.win_scaling = 2 ** int(window_scale.hex(), base=16)
-        except:
-            a = 0
+        options = dpkt.tcp.parse_opts(self.handshake[0][-1].tcp.opts)
+        window_scale = [value for opt, value in options if opt == dpkt.tcp.TCP_OPT_WSCALE][0]
+        self.win_scaling = 2 ** int(window_scale.hex(), base=16)
+        print("window_scale: " + str(self.win_scaling))
 
     def __separate_handshake(self):
         # get the syn packet from sender
