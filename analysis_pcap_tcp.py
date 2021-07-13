@@ -78,11 +78,8 @@ class Flow():
         sender_ack = None
         for packet in self.sender:
             if packet[-1].get_tcp_flags() == 0x10:
-                try:
-                    if packet[-1].get_ack() == receiver_syn[-1].get_seq() + 1:
-                        sender_ack = packet
-                        break
-                except:
+                if packet[-1].get_ack() == receiver_syn[-1].get_seq() + 1:
+                    sender_ack = packet
                     break
         if sender_ack == None:
             print("No sender_ack")
@@ -226,8 +223,8 @@ def get_tcp_flows(file):
                 # print("flows[iden]: " + str(flows[iden]))
 
         # Early termination
-        if counter >= 10000:
-            break
+        # if counter >= 10000:
+        #     break
 
     for src_iden in identifications:
         dest_iden = src_iden[2:] + src_iden[:2]
@@ -246,14 +243,13 @@ if __name__ == "__main__":
             print(f"Flow {num} Information:")
             print("PART A")
             print(f"a) {flow.get_id()}")
-            try:
-                transactions = flow.get_transactions()
-                print("b) The first 2 transactions:")
-                for t_count, transaction in enumerate(transactions, start=1):
-                    print(
-                        f"Tranaction {t_count}: \n\tSequence number: {transaction[0]:,d}\n\tAck number: {transaction[1]:,d}\n\tReceive Window Size: {transaction[2]:,d}")
-            except:
-                a = 0
+
+            transactions = flow.get_transactions()
+            print("b) The first 2 transactions:")
+            for t_count, transaction in enumerate(transactions, start=1):
+                print(
+                    f"Tranaction {t_count}: \n\tSequence number: {transaction[0]:,d}\n\tAck number: {transaction[1]:,d}\n\tReceive Window Size: {transaction[2]:,d}")
+
             data_sent, period = flow.get_throughput()
             print(
                 f"c) Throughput: {data_sent / period:,f} bytes/second ({data_sent:,d} bytes sent in {period:.4f} seconds)")
