@@ -128,7 +128,7 @@ class Flow():
                 first_ack = packet
                 break
         start_time = self.flow[0][1]
-        RTT = round(first_ack[1] - start_time, ndigits=2)
+        RTT = round(first_ack[1] - start_time, ndigits=6)
         # get timestamps 
         timestamps = [packet[1] for packet in self.flow if packet[-1].get_src() == SENDER]
         # subtract start time from each timestamp
