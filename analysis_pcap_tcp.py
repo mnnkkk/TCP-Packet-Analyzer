@@ -104,10 +104,10 @@ class Flow():
         # find the fin,ack from receiver
         last_packet = None
         for packet in self.receiver:
-            if packet[-1].get_tcp_flags() == 0x11:
-                last_packet == packet
+            if packet[-1].get_tcp_flags() & 0x11:
+                last_packet = packet
         # get index of last packet in flow
-        index = self.flow.index(packet)
+        index = self.flow.index(last_packet)
         flow_in_period = self.flow[:index + 1]
         data_sent = sum([packet[-1].get_tcp_size() for packet in flow_in_period if packet[-1].get_src() == SENDER])
         period = flow_in_period[-1][1] - flow_in_period[0][1]
